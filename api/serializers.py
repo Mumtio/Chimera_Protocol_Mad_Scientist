@@ -37,6 +37,11 @@ class RememberSerializer(serializers.Serializer):
         default=list
     )
     conversation_id = serializers.CharField(required=True)
+    scope = serializers.ChoiceField(
+        choices=['conversation', 'team-global'],
+        required=False,
+        default='conversation'
+    )
     metadata = serializers.JSONField(required=False, default=dict)
 
 
@@ -64,21 +69,25 @@ class ChatSerializer(serializers.Serializer):
 class ConversationSerializer(serializers.ModelSerializer):
     """Serializer for Conversation model"""
     message_count = serializers.SerializerMethodField()
+    member_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
-        fields = ['id', 'title', 'message_count', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'is_team_shared', 'message_count', 'member_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_message_count(self, obj):
         return obj.messages.count()
+    
+    def get_member_count(self, obj):
+        return obj.members.count()
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     """Serializer for ChatMessage model"""
     class Meta:
         model = ChatMessage
-        fields = ['id', 'role', 'content', 'metadata', 'created_at']
+        fields = ['id', 'role', 'content', 'model_used', 'metadata', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 

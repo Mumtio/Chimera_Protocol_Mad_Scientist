@@ -69,11 +69,25 @@ Spec-driven backend for Kiroween - A conversational AI with persistent memory us
   - Response: `{message: string}`
   - Description: Delete conversation and all messages (requires authentication)
 
+### Add Conversation Member
+- **POST** `/api/conversations/{conversation_id}/add-member`
+  - Request: `{username: string}`
+  - Response: `{message: string, member_count: number}`
+  - Description: Add a team member to conversation for collaboration (requires authentication)
+
 ## Chat Pipeline
+
+### Chat with Multi-LLM Support
 - **POST** `/api/chat`
   - Request: `{conversation_id: string, message: string, model?: string, remember?: boolean}`
-  - Response: `{reply: string, trace: object, memory_injected: boolean}`
-  - Description: Main chat endpoint. Optionally stores conversation in memory if `remember=true`
+  - Response: `{reply: string, model_used: string, trace: object, memory_injected: boolean}`
+  - Description: Main chat endpoint with automatic context injection. Supports multiple LLMs (GPT-4, Claude, Llama, etc.). Optionally stores conversation in memory if `remember=true`
+  - Supported Models: gpt-4, gpt-3.5-turbo, claude-3-opus, claude-3-sonnet, llama-3-70b, mixtral-8x7b, echo (demo)
+
+### Get Supported Models
+- **GET** `/api/models`
+  - Response: `{models: object, total: number}`
+  - Description: Get list of all supported LLM models grouped by provider
 
 ## Memory Storage (MCP Endpoints)
 
@@ -169,3 +183,17 @@ All endpoints return JSON with consistent envelope:
   - Description: Test endpoint for unit tests
   - Type: test-endpoint
   - Added: 2025-11-28T07:06:13.835200+00:00
+
+
+## Hook-Added Endpoint
+- **GET** `/api/test`
+  - Description: Test endpoint for unit tests
+  - Type: test-endpoint
+  - Added: 2025-11-28T07:55:26.030880+00:00
+
+
+## Hook-Added Endpoint
+- **GET** `/api/test`
+  - Description: Test endpoint for unit tests
+  - Type: test-endpoint
+  - Added: 2025-11-28T08:53:56.808567+00:00
