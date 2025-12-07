@@ -102,11 +102,17 @@ def integration_detail_view(request, integration_id):
         
         elif request.method == 'PUT':
             if 'apiKey' in request.data:
+                new_api_key = request.data['apiKey']
+                
+                # Test the new API key before saving
+                test_result = _test_provider_connection(integration.provider, new_api_key)
+                
                 # Encrypt new API key before storage
-                encrypted_key = encrypt_api_key(request.data['apiKey'])
+                encrypted_key = encrypt_api_key(new_api_key)
                 integration.api_key = encrypted_key
-                integration.status = 'disconnected'  # Reset status when key changes
-                integration.error_message = None
+                integration.status = 'connected' if test_result['success'] else 'error'
+                integration.last_tested = timezone.now()
+                integration.error_message = test_result.get('error')
             
             integration.save()
             
