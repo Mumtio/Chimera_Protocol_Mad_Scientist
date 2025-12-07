@@ -79,26 +79,28 @@ def get_provider(model_name: str) -> str:
     Returns:
         Provider name (openai, anthropic, google, groq, echo, local)
     """
-    # Remove "model-" prefix if present
-    clean_name = model_name.replace('model-', '').lower()
+    import logging
+    logger = logging.getLogger(__name__)
     
-    # Check exact match first
+    # Remove "model-" prefix if present
+    clean_name = model_name.replace('model-', '')
+    
+    logger.info(f"🔍 get_provider: input={model_name}, clean_name={clean_name}")
+    
+    # Check exact match first (case-sensitive)
     if clean_name in SUPPORTED_MODELS:
+        logger.info(f"✅ Exact match found: {clean_name} -> {SUPPORTED_MODELS[clean_name]}")
         return SUPPORTED_MODELS[clean_name]
     
-    # Normalize the clean_name for comparison (remove dots, hyphens, underscores)
-    normalized_name = clean_name.replace('.', '').replace('-', '').replace('_', '')
-    
-    # Check against all supported models with normalization
+    # Check case-insensitive match
+    clean_name_lower = clean_name.lower()
     for model_key, provider in SUPPORTED_MODELS.items():
-        # Normalize the model key
-        normalized_key = model_key.replace('.', '').replace('-', '').replace('_', '').lower()
-        
-        # Check if they match exactly after normalization
-        if normalized_name == normalized_key:
+        if model_key.lower() == clean_name_lower:
+            logger.info(f"✅ Case-insensitive match: {clean_name} -> {provider}")
             return provider
     
     # Default to echo for demo
+    logger.warning(f"⚠️ No match found for {clean_name}, defaulting to echo")
     return 'echo'
 
 
@@ -123,16 +125,25 @@ def call_llm_with_conversation(conversation: Conversation, user_message: str, ap
     
     # Get provider from model_id
     model_id = conversation.model_id
+    logger.info(f"🔍 call_llm_with_conversation: model_id={model_id}")
+    
     provider = get_provider(model_id)
     
     # Extract actual model name (remove "model-" prefix if present)
     model_name = model_id.replace('model-', '')
     
-    # Normalize model name to match API format (e.g., "gemini-20-flash" -> "gemini-2.0-flash")
-    model_name = normalize_model_name(model_name, provider)
+    # Log the exact model name being used
+    logger.info(f"🔍 Extracted model_name: {model_name}")
+    
+    # Normalize model name to match API format
+    normalized_name = normalize_model_name(model_name, provider)
+    logger.info(f"🔍 Normalized model_name: {normalized_name}")
+    
+    # Use the normalized name
+    model_name = normalized_name
     
     # Debug logging
-    logger.info(f"🔍 DEBUG: model_id={model_id}, provider={provider}, model_name={model_name}, has_api_key={api_key is not None}")
+    logger.info(f"🔍 FINAL: model_id={model_id}, provider={provider}, model_name={model_name}, has_api_key={api_key is not None}")
     
     # Route to appropriate provider
     if provider == 'openai':
