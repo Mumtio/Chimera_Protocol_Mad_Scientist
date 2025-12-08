@@ -263,8 +263,13 @@ def import_from_url_view(request, workspace_id):
     Request body:
     {
         "url": "https://...",
-        "summarize": true/false (optional, default true)
+        "summarize": true/false (optional, default true),
+        "mode": "basic" or "advanced" (optional, default "basic")
     }
+    
+    Modes:
+    - basic: Uses requests + BeautifulSoup (fast, lightweight, default)
+    - advanced: Uses Playwright (supports JS-heavy sites, requires premium server)
     """
     try:
         workspace = Workspace.objects.get(id=workspace_id)
@@ -288,12 +293,17 @@ def import_from_url_view(request, workspace_id):
             )
         
         should_summarize = request.data.get('summarize', True)
+        scrape_mode = request.data.get('mode', 'basic')  # 'basic' or 'advanced'
+        
+        # Validate mode
+        if scrape_mode not in ['basic', 'advanced']:
+            scrape_mode = 'basic'
         
         # Import the scraper
         from .url_scraper import scrape_url, summarize_content
         
-        # Scrape the URL
-        scrape_result = scrape_url(url)
+        # Scrape the URL with specified mode
+        scrape_result = scrape_url(url, mode=scrape_mode)
         
         if not scrape_result['success']:
             return Response(
@@ -304,20 +314,40 @@ def import_from_url_view(request, workspace_id):
         # Get content
         title = scrape_result['title']
         content = scrape_result['content']
-        url_type = scrape_result['type']
+        used_mode = scrape_result.get('mode', 'basic')
+        
+        # Determine URL type from domain
+        from urllib.parse import urlparse
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc.lower()
+        
+        if 'chatgpt.com' in domain or 'chat.openai.com' in domain:
+            url_type = 'chatgpt'
+        elif 'notion.so' in domain or 'notion.site' in domain:
+            url_type = 'notion'
+        elif 'docs.google.com' in domain:
+            url_type = 'google_docs'
+        elif 'github.com' in domain:
+            url_type = 'github'
+        else:
+            url_type = 'webpage'
         
         # Summarize if requested
         if should_summarize and len(content) > 500:
             content = summarize_content(content, title)
         
-        # Generate tags based on URL type
+        # Generate tags based on URL type and scrape mode
         tags = ['imported', f'source:{url_type}']
+        if used_mode == 'advanced':
+            tags.append('playwright-scraped')
         if url_type == 'chatgpt':
             tags.append('ai-conversation')
         elif url_type == 'notion':
             tags.append('documentation')
         elif url_type == 'google_docs':
             tags.append('document')
+        elif url_type == 'github':
+            tags.append('code')
         
         # Create memory
         memory = Memory.objects.create(
@@ -328,6 +358,7 @@ def import_from_url_view(request, workspace_id):
             metadata={
                 'source_url': url,
                 'source_type': url_type,
+                'scrape_mode': used_mode,
                 'imported_at': str(timezone.now()),
                 'was_summarized': should_summarize and len(scrape_result['content']) > 500
             }

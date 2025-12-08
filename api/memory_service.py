@@ -116,6 +116,47 @@ class MemoryService:
         score = (title_matches * 2.0 + content_matches) / len(query_tokens)
         
         return min(score, 1.0)  # Cap at 1.0
+    
+    def store(self, content: str, memory_id: str) -> bool:
+        """
+        Store/index a memory for search.
+        In this lightweight implementation, we don't need to do anything special
+        since we search directly from the database.
+        
+        Args:
+            content: The memory content text
+            memory_id: The memory ID
+            
+        Returns:
+            True if successful
+        """
+        # In this lightweight implementation, memories are stored in the database
+        # and searched directly. No separate index needed.
+        # This method exists for API compatibility.
+        return True
+    
+    def remove(self, memory_id: str) -> bool:
+        """
+        Remove a memory from the search index.
+        
+        Args:
+            memory_id: The memory ID to remove
+            
+        Returns:
+            True if successful
+        """
+        # No separate index to remove from in this implementation
+        return True
+    
+    def clear(self) -> bool:
+        """
+        Clear all memories from the search index.
+        
+        Returns:
+            True if successful
+        """
+        # No separate index to clear in this implementation
+        return True
 
 
 # Global instance

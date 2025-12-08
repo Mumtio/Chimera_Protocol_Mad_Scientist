@@ -6,6 +6,11 @@ set -o errexit
 pip install --upgrade pip
 pip install -r requirements.txt
 
+# Install Playwright browsers (chromium only to save space)
+# This requires ~300MB disk space
+echo "Installing Playwright Chromium browser..."
+playwright install chromium --with-deps || echo "Playwright browser install skipped (optional)"
+
 # Collect static files
 python manage.py collectstatic --no-input
 
