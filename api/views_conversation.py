@@ -260,13 +260,20 @@ def send_message_view(request, conversation_id):
                     # AI call failed, return error in response
                     error_msg = ai_response.get('error', 'AI call failed')
                     response_serializer = MessageSerializer(user_message)
+                    
+                    # Use 429 for rate limits, 502 for provider errors
+                    if 'rate limit' in error_msg.lower() or '429' in error_msg:
+                        http_status = status.HTTP_429_TOO_MANY_REQUESTS
+                    else:
+                        http_status = status.HTTP_502_BAD_GATEWAY
+                    
                     return Response(
                         api_response(
                             ok=False,
                             error=f"AI response failed: {error_msg}",
                             data={'userMessage': response_serializer.data}
                         ),
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                        status=http_status
                     )
             
             except Exception as e:

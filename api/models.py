@@ -142,6 +142,7 @@ class Integration(models.Model):
         ('anthropic', 'Anthropic'),
         ('google', 'Google'),
         ('deepseek', 'DeepSeek'),
+        ('groq', 'Groq'),
     ]
     
     STATUS_CHOICES = [
@@ -153,6 +154,8 @@ class Integration(models.Model):
     id = models.CharField(max_length=50, primary_key=True, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='integrations')
     provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    model_id = models.CharField(max_length=100, null=True, blank=True)  # e.g., "llama-3.3-70b-versatile"
+    model_name = models.CharField(max_length=100, null=True, blank=True)  # e.g., "Llama 3.3 70B"
     api_key = models.TextField()  # Encrypted API key (can be longer than 255 chars)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='disconnected')
     last_tested = models.DateTimeField(null=True, blank=True)

@@ -162,10 +162,12 @@ class IntegrationSerializer(serializers.ModelSerializer):
     lastTested = serializers.DateTimeField(source='last_tested', allow_null=True, read_only=True)
     errorMessage = serializers.CharField(source='error_message', allow_null=True, read_only=True)
     apiKey = serializers.SerializerMethodField()
+    modelId = serializers.CharField(source='model_id', allow_null=True, required=False)
+    modelName = serializers.CharField(source='model_name', allow_null=True, required=False)
     
     class Meta:
         model = Integration
-        fields = ['id', 'provider', 'apiKey', 'status', 'lastTested', 'errorMessage']
+        fields = ['id', 'provider', 'modelId', 'modelName', 'apiKey', 'status', 'lastTested', 'errorMessage']
         read_only_fields = ['id', 'status', 'lastTested', 'errorMessage']
     
     def get_apiKey(self, obj):
@@ -182,6 +184,8 @@ class IntegrationCreateSerializer(serializers.Serializer):
     """Serializer for creating an integration"""
     provider = serializers.ChoiceField(choices=['openai', 'anthropic', 'google', 'deepseek', 'groq'])
     apiKey = serializers.CharField(min_length=10, max_length=500)
+    modelId = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    modelName = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 # Message Serializers

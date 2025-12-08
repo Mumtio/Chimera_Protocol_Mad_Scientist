@@ -47,6 +47,8 @@ def integrations_view(request):
         
         provider = serializer.validated_data['provider']
         api_key = serializer.validated_data['apiKey']
+        model_id = serializer.validated_data.get('modelId')
+        model_name = serializer.validated_data.get('modelName')
         
         # Check if integration already exists
         if Integration.objects.filter(user=request.user, provider=provider).exists():
@@ -58,7 +60,7 @@ def integrations_view(request):
         # Test the API connection before saving
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(f"🔍 Creating integration for provider: {provider}")
+        logger.info(f"🔍 Creating integration for provider: {provider}, model: {model_id}")
         
         test_result = _test_provider_connection(provider, api_key)
         
@@ -69,6 +71,8 @@ def integrations_view(request):
         integration = Integration.objects.create(
             user=request.user,
             provider=provider,
+            model_id=model_id,
+            model_name=model_name,
             api_key=encrypted_key,
             status='connected' if test_result['success'] else 'error',
             last_tested=timezone.now(),
@@ -113,6 +117,12 @@ def integration_detail_view(request, integration_id):
                 integration.status = 'connected' if test_result['success'] else 'error'
                 integration.last_tested = timezone.now()
                 integration.error_message = test_result.get('error')
+            
+            # Update model info if provided
+            if 'modelId' in request.data:
+                integration.model_id = request.data['modelId']
+            if 'modelName' in request.data:
+                integration.model_name = request.data['modelName']
             
             integration.save()
             
@@ -348,42 +358,43 @@ def available_models_view(request):
         status='connected'
     )
     
-    # All models available for each provider (must match SUPPORTED_MODELS in llm_router.py)
-    PROVIDER_MODELS = {
-        'openai': ['gpt-4o', 'gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-        'anthropic': ['claude-3.5-sonnet', 'claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-        'google': ['gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'],
-        'deepseek': ['deepseek-chat', 'deepseek-coder'],
-        'groq': ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
-    }
-    
     # Build list of available models from connected integrations
+    # Only show the specific model the user integrated, not all models for that provider
     available_models = []
     model_index = 0
     
     for integration in connected_integrations:
         provider = integration.provider
         
-        # Get all models for this provider
-        provider_models = PROVIDER_MODELS.get(provider, [])
+        # Use the specific model the user selected, or fallback to a default
+        model_name = integration.model_id
+        display_name = integration.model_name
         
-        for model_name in provider_models:
-            # Generate display name (capitalize and replace hyphens with spaces)
+        # Fallback for legacy integrations without model_id
+        if not model_name:
+            default_models = {
+                'openai': 'gpt-4o',
+                'anthropic': 'claude-3.5-sonnet',
+                'google': 'gemini-2.0-flash',
+                'deepseek': 'deepseek-chat',
+                'groq': 'llama-3.3-70b-versatile',
+            }
+            model_name = default_models.get(provider, 'unknown')
             display_name = model_name.replace('-', ' ').title()
-            
-            # Create model ID (preserve dots in model names)
-            model_id = f"model-{model_name}"
-            
-            available_models.append({
-                'id': model_id,
-                'provider': provider,
-                'name': model_name,
-                'displayName': display_name,
-                'brainRegion': get_brain_region(provider),
-                'status': 'connected',
-                'position': get_model_position(provider, model_index)
-            })
-            model_index += 1
+        
+        # Create model ID
+        model_id = f"model-{model_name}"
+        
+        available_models.append({
+            'id': model_id,
+            'provider': provider,
+            'name': model_name,
+            'displayName': display_name or model_name.replace('-', ' ').title(),
+            'brainRegion': get_brain_region(provider),
+            'status': 'connected',
+            'position': get_model_position(provider, model_index)
+        })
+        model_index += 1
     
     return Response(api_response(
         ok=True,

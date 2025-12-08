@@ -325,8 +325,12 @@ def call_google(model: str, api_key: str, context: Dict[str, Any]) -> Dict[str, 
             try:
                 error_data = response.json()
                 error_msg = error_data.get('error', {}).get('message', response.text[:200])
+                # Check for quota/rate limit errors in message (Google sometimes uses 400/403)
+                if any(word in error_msg.lower() for word in ['quota', 'rate', 'limit', 'exceeded']):
+                    return error_response(model, 'google', 'Rate limit exceeded. Try Groq instead (free).')
             except:
                 error_msg = response.text[:200]
+            logger.error(f"Google API error {response.status_code}: {error_msg}")
             return error_response(model, 'google', error_msg)
             
     except requests.exceptions.Timeout:
